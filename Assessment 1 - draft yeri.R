@@ -1,29 +1,42 @@
-setwd('/Users/danielh/Documents/UC3M/Master/Second term /multivarible analysis/heart+disease')
+# Names:Fabian Encarnacion 
+#       Yeritza Devia
+#       Lily Yang
+
+# Libraries 
+#install.packages("corrplot")
+library(ggplot2)
+library(corrplot)
+
+setwd('/Users/danielh/Documents/UC3M/Master/Second term /multivarible analysis/automobile')
 list.files()
 
-#Presentar la base de datos, escribir de dodne se saco.
-#Incialmente 303 parcientes, 
-#clasificar las variables entre cuantitativas, binarias , categoricas 
+#Assignation of the columns names
+col_names = c("symboling","normalized_losses","make","fuel_type","aspiration",
+              "num_of_doors","body_style","drive_wheels","engine_location","wheel_base","length",
+              "width","height","curb_weight","engine_type","num_cylinders","engine_size",
+              "fuel_system","bore","stroke","compression_ratio","horsepower","peak_rpm",
+              "city_mpg","highway_mpg","price")
 
-col_names <- c("age", "sex", "cp", "trestbps", "chol", "fbs", 
-               "restecg", "thalach", "exang", "oldpeak", 
-               "slope", "ca", "thal", "num")
+# Read the database
+data = read.csv('imports-85.data', header = FALSE, col.names = col_names, na.strings = '?') 
+dim(data)
 
-data = read.csv('processed.cleveland.data', header = FALSE, col.names = col_names, na.strings = '?') 
-
-#Limpieza de los datos 
-# filtro de los 6 registros incompletos 
-#nuevo data set 297
+#Clean the data base to drop incomplete observation (with NA features)
 data_clean = na.omit(data)
+dim(data_clean)
 
-v_quanti = c("age", "trestbps", "chol", "thalach", "oldpeak", "ca")
+# Dataset with only quantitative variables 
+v_quanti = c("normalized_losses", "wheel_base","length","width",
+             "height","curb_weight","engine_size","bore", "stroke", 
+             "compression_ratio", "horsepower","peak_rpm", "city_mpg",
+             "highway_mpg","price")
 df_quanti = data_clean[,v_quanti]
 
-#generar en interpretar estadisticos descriptivos 
-#visualizaciones generar
-library(ggplot2)
+dim(df_quanti)
 
-par(mfrow = c(2,3))
+# Generations of  descriptive statistics 
+#visualizations Histograms
+par(mfrow = c(4,4))
 for (col in names(df_quanti)) {
   hist(df_quanti[[col]],
        main = paste('Histogram of',col),
@@ -43,28 +56,21 @@ pairs(df_quanti,
       pch = 19,
       col = 'lightblue')
 
-# Evaluacion de la intercorrelacion 
-# matrix de correlacion R y los 6 indices 
-
+##### Inter correlation assessment
+# Covariance matrix 
 S = cov(df_quanti)
 print(round(S, 2))
 
+# Correlation Matrix
 R = cor(df_quanti)
 print(round(R,2))
 
-#install.packages("corrplot")
-library(corrplot)
+# Correlation graph
 corrplot(R, method = 'number',
          type= 'upper', 
          tl.col = 'black',
-         title = 'Matrix of Correlation R',
-         mar = c(0,0,1,0),
-         diag = FALSE)
-
-corrplot(R, method = 'circle',
-         type= 'upper', 
-         tl.col = 'black',
-         title = 'Matrix of Correlation R',
+         tl.srt = 45,
+         title = 'Correlation Matrix (R)',
          mar = c(0,0,1,0),
          diag = FALSE)
 
@@ -103,64 +109,52 @@ q_measures
 
 #########################################
 ####### PCA #########
-#justificar por que es adecuado aplicar PCA basado en la intercorrelacion
-
-#Eleccion de la matriz 
-#justificar por que se esa R en lugar de S
-#debido a las diferentes escalas y unidades de variables 
 
 pca = prcomp(df_quanti, center = TRUE, scale. = TRUE)
 
 
-#calculo y seleccion de componentes:
-# presentar los autovalores y % de varianza explicada 
+#Component selection:
 
+# Eigenvalues of PCA
 eigenvalues = pca$sdev^2
+
+#Explained variance
 var_explained = (eigenvalues/sum(eigenvalues))*100
 
-cumsum(var_explained)
-plot(eigenvalues, type = 'b')
-screeplot(pca, type = 'lines')
+#Cumulative Explained variance 
+cum_expl_var = cumsum(var_explained)
 
-#Aplicar los criterios de seleccion para legir cuantos 
-#componentes conservar : Kaiser, Jollifffe y el grafico de codo (Scree plot de Cattel)
-
-#kaiser
+#kKaiser’s criterion.
 eigenvalues > 1
 sum(eigenvalues > 1)
 
-#Jolliffe
+#Jollife’s criterion
 eigenvalues > 0.7
 sum(eigenvalues > 0.7)
 
-#Frobenius knee
-screeplot(pca, type = 'lines', main = 'Scree plot')
-abline(h=1, col = 'red', lty = 2)
-
+#Cattell’s scree graph
 plot(eigenvalues, type = 'b', pch =19, col = 'royalblue',
-     xlab = 'Number of PCA',
+     xlab = 'Number of PC',
      ylab = 'Eigenvalues',
-     main = 'knee of cattell')
-abline(h = 1, col = "red", lty = 2)    # Referencia Kaiser
-abline(h = 0.7, col = "orange", lty = 3) # Referencia Jolliffe
+     main = 'Cattell’s scree graph')
+abline(h = 1, col = "red", lty = 2)    #  Kaiser
+abline(h = 0.7, col = "orange", lty = 3) #  Jolliffe
+legend("topright", 
+       legend = c("Eigenvalues", "Kaiser (λ = 1)", "Jolliffe (λ = 0.7)"),
+       col = c("royalblue", "red", "orange"), 
+       lty = c(1, 2, 3), pch = c(19, NA, NA), bty = "n")
 
-#Interpretacion de los componentes principales:
-#Comentat los coeficientes (pesos) de la combiancion 
-#para dar un significado practico de los nuevos ejes
+# Extractions of eigenvalues matrix (T_tilde)'loading'
+loadings = pca$rotation
 
-
-# --- 4.1. Extraer la matriz de autovectores (T_tilde) ---
-# 'loadings' es una matriz de 6 filas (variables) x 6 columnas (componentes)
-loadings <- pca$rotation
-
-# --- 4.2. Visualizar los coeficientes para las q componentes retenidas (ej. q = 2) ---
-q <- 2
-print("Matriz de Autovectores / Pesos (Loadings):")
+# Visualization of coefficient for selected components
+q <- 3
+print("Eigenvalues matrix / Weights (Loadings):")
 print(round(loadings[, 1:q], 4))
 
 
-# --- 4.3. Gráfico de barras para comparar los coeficientes de PC1 y PC2 ---
-par(mfrow = c(1, 2)) # Dividir pantalla en 2 columnas
+# Bar chart coefficients PC1 y PC2
+par(mfrow = c(1, 2)) # split the screen in two columns
 
 barplot(loadings[, 1], 
         main = "Pesos en PC1", 
@@ -176,65 +170,11 @@ barplot(loadings[, 2],
         ylim = c(-1, 1))
 abline(h = 0, lty = 2, col = "gray")
 
-par(mfrow = c(1, 1)) # Restaurar pantalla
+par(mfrow = c(1, 1)) 
 
 
-#Visualizacion en el espacio reciduos:
-#Pintal el biplot o el grafico de dispersion de las dos primeras compoenetes 
-# observando como se distribuyen los pacientes
-
-
-
-# --- 5.1. Extraer las puntuaciones (scores) de los 297 pacientes ---
+# Extract scores
 scores <- pca$x
-
-# Calcular el porcentaje de varianza para etiquetar los ejes del gráfico
-var_explicada <- (pca$sdev^2 / sum(pca$sdev^2)) * 100
-
-
-# --- 5.2. Gráfico 2D de Pacientes: PC1 vs PC2 ---
-# Clasificamos a los pacientes según su diagnóstico (0 = Sano, >0 = Enfermedad)
-grupo_salud <- ifelse(data_clean$num == 0, "Sano", "Enfermo")
-
-plot(scores[, 1], scores[, 2],
-     col = ifelse(grupo_salud == "Sano", "forestgreen", "firebrick"),
-     pch = 19,
-     xlab = paste0("PC1 (", round(var_explicada[1], 1), "% varianza)"),
-     ylab = paste0("PC2 (", round(var_explicada[2], 1), "% varianza)"),
-     main = "Proyección de Pacientes (PC1 vs PC2)")
-
-# Añadir ejes de referencia en el origen (0,0)
-abline(h = 0, v = 0, lty = 2, col = "gray50")
-
-# Leyenda explicativa
-legend("topright", 
-       legend = c("Sano (num = 0)", "Enfermo (num > 0)"),
-       col = c("forestgreen", "firebrick"), 
-       pch = 19)
-
-
-# --- 5.3. Representación Biplot (Pacientes + Vectores de Variables) ---
-biplot(pca,
-       scale = 0,          # Mantiene la métrica del espacio
-       cex = c(0.6, 0.9),  # Tamaño de etiquetas: (pacientes, variables)
-       col = c("gray60", "red"),
-       xlab = paste0("PC1 (", round(var_explicada[1], 1), "%)"),
-       ylab = paste0("PC2 (", round(var_explicada[2], 1), "%)"),
-       main = "Biplot: Pacientes y Vectores de Variables")
-
-abline(h = 0, v = 0, lty = 2, col = "gray50")
-
-
-
-
-
-
-###########################################################
-########### C resultadoas, Codigo y Referencias ######
-#Discutir las conclusiones numericas y graficas obtenidad
-#Incluir el codigo en R o los paquetes y librerias usada
-#Incluir las referencias bibliograficas empleadas
-
 
 
 
