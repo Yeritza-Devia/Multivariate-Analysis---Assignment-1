@@ -87,15 +87,16 @@ boxplot(scale(df_quanti),
         main = 'Boxplots quantitative variables',
         col = 'cyan3')
 
-pairs(df_quanti,  
-      main = 'Pairs plot',
-      pch = 19,
-      col = 'lightblue')
-
+#pairs(df_quanti,  
+      #main = 'Pairs plot',
+      #pch = 19,
+      #col = 'lightblue')
+#
 #Visualize summary 
 ggpairs(df_quanti) 
 
-##### Inter correlation assessment
+
+##### Multicollinearity Diagnostics and Intercorrelation Indices
 # Covariance matrix 
 S = cov(df_quanti)
 print(round(S, 2))
@@ -113,14 +114,14 @@ corrplot(R, method = 'number',
          mar = c(0,0,1,0),
          diag = FALSE)
 
-corrplot(R, 
-         method = "color", 
-         type = "upper", 
-         #addCoef.col = "black", 
-         tl.col = "black", 
-         #tl.srt = 45,
-         title = "Correlation Heatmap",
-         mar = c(0, 0, 2, 0))
+#corrplot(R, 
+         #method = "color", 
+         #type = "upper", 
+         ##addCoef.col = "black", 
+         #tl.col = "black", 
+         ##tl.srt = 45,
+         #title = "Correlation Heatmap",
+         #mar = c(0, 0, 2, 0))
 
 intercorrelation = function(x){
   n = nrow(x)
@@ -164,10 +165,11 @@ summary(pca)
 #Component selection:
 
 # Eigenvalues of PCA
-eigenvalues = pca$sdev^2
+#eigenvalues = pca$sdev^2
 get_eigenvalue(pca)
+eigenvalues=get_eigenvalue(pca)$eigenvalue
 #Explained variance
-var_explained = (eigenvalues/sum(eigenvalues))*100
+#var_explained = (eigenvalues/sum(eigenvalues))*100
 fviz_eig(pca, 
          addlabels = TRUE, 
          ylim = c(0, 45),
@@ -185,7 +187,7 @@ fviz_pca_var(pca,
              title = "Círculo de Correlaciones (PC1 vs PC2)")
 
 #Cumulative Explained variance 
-cum_expl_var = cumsum(var_explained)
+cum_expl_var = get_eigenvalue(pca)$cumulative.variance.percent
 
 #kKaiser’s criterion.
 eigenvalues > 1
@@ -236,21 +238,51 @@ abline(h = 0, lty = 2, col = "gray")
 
 par(mfrow = c(1, 1)) 
 
+#Cross-correlations Y1: X1, ..., X15. Y2: X1, ... , X15
+cross_cor <- cor(df_quanti, pca$x[, 1:2])
+colnames(cross_cor) <- c("Y1 (PC1)", "Y2 (PC2)")
 
+# 2. Graficar con corrplot en disposición horizontal (2 filas x 11 columnas)
+corrplot(t(cross_cor),
+         method = "color",
+         is.corr = TRUE,
+         col = colorRampPalette(c("#B2182B", "white", "#2166AC"))(200),
+         addCoef.col = "black",
+         number.cex = 0.75,
+         tl.col = "black",
+         tl.srt = 45,
+         cl.pos = "b",
+         title = "Correlaciones cruzadas: Componentes (Y1, Y2) vs Variables (X)",
+         mar = c(0, 0, 2, 0))
+
+
+
+#Contributions graph
 p1 <- fviz_contrib(pca, choice = "var", axes = 1, top = 6, title = "Contribución a Dim 1")
 p2 <- fviz_contrib(pca, choice = "var", axes = 2, top = 6, title = "Contribución a Dim 2")
 gridExtra::grid.arrange(p1, p2, ncol = 2)
 
-#Plot in new coordinates
-fviz_pca_biplot(pca)
-fviz_pca_ind(pca,
-             geom.ind = "point",       # Muestra solo los puntos (sin números de fila)
-             pointsize = 2,
-             pointshape = 19,
-             col.ind = "steelblue",    # Color único para todos los puntos
-             title = "Proyección de los 690 individuos en las nuevas coordenadas (Dim 1 vs Dim 2)")
+
 
 # Extract scores
 scores <- pca$x
+#Plot in new coordinates
+fviz_pca_biplot(pca,
+                label = "var",
+                repel = TRUE,               # Evita que los nombres de las 11 variables se pisen
+                col.var = "#B2182B",        # Flechas en rojo oscuro para contrastar
+                col.ind = "gray60",         # Puntos de los 197 vehículos en gris suave
+                alpha.ind = 0.6,
+                title = "PCA Biplot: Variables Técnicas y Automóviles (PC1 vs PC2)") +
+  theme_minimal()
 
 
+#fviz_pca_ind(pca,
+             #geom.ind = "point",       # Muestra solo los puntos (sin números de fila)
+             #pointsize = 2,
+             #pointshape = 19,
+             #col.ind = "steelblue",    # Color único para todos los puntos
+             #title = "Proyección de los 690 individuos en las nuevas coordenadas (Dim 1 vs Dim 2)")
+
+
+#Stability Analysis
