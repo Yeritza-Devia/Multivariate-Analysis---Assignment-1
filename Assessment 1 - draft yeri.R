@@ -176,6 +176,61 @@ par(mfrow = c(1, 1))
 # Extract scores
 scores <- pca$x
 
+#=====================================================================================
+# CATERGORICAL VARIABLES GRAPHS & PCA CATERGORICAL GRAPHS
+#=====================================================================================
 
+# Graphing catergorical variables into barplot
+cat_var = data_clean[,c("fuel_type","aspiration","body_style","drive_wheels")] # creating a small table with catergorical variables
+
+par(mfrow = c(2,3)) # splitting the plot window into grids to see all the graphs
+
+for(v in names(cat_var)) barplot(table(cat_var[[v]]), main = v, col = "steelblue") # Iterating through each variable 
+
+# Bar plot of Aspiration vs Fuel type
+ggplot(data_clean, aes(x = fuel_type, fill = aspiration)) + 
+  geom_bar(position = "fill") +
+  labs(title = "Aspiration by Fuel type", x = "Fuel type", y = "Proportion", fill = "Aspiration") + 
+  scale_fill_discrete(labels = c("std" = "Standard", "turbo" = "Turbo"))
+
+# Bar plot of Drive by wheels vs Body type
+ggplot(data_clean, aes(x = body_style, fill = drive_wheels)) + 
+  geom_bar(position = "fill") +
+  labs(title = "Drive Wheels by Body type", x = "Body type", y = "Proportion", fill = "Drive wheels") + 
+  scale_fill_discrete(labels = c("4wd" = "4 Wheel Drive", "fwd" = "Front Wheel Drive", "rwd" = "Rear Wheel Drive"))
+
+# PCA scores coloured by categorical variables
+fviz_pca_ind(pca, geom = "point",
+             habillage = data_clean$body_style,
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "PCA scores by body style")
+
+fviz_pca_ind(pca, geom = "point",
+             habillage = data_clean$drive_wheels,
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "PCA scores by drive wheels")
+
+fviz_pca_ind(pca, geom = "point",
+             habillage = data_clean$fuel_type,
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "PCA scores by fuel type")
+
+fviz_pca_ind(pca, geom = "point",
+             habillage = data_clean$aspiration,
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "PCA scores by aspiration")
+
+# PCA scores coloured by categorical variables this is all 4 graphs in one figure
+cat_plots <- lapply(v_cat, function(v) {
+  fviz_pca_ind(pca, geom = "point",
+               habillage = data_clean[[v]],
+               addEllipses = TRUE, ellipse.type = "confidence",
+               title = paste("PCA scores by", v))
+})
+grid.arrange(grobs = cat_plots, ncol = 2)
+
+# Saves the 4 graph figure 
+ggsave("pca_by_category.png", arrangeGrob(grobs = cat_plots, ncol = 2),
+       width = 12, height = 10, dpi = 300)
 
 
